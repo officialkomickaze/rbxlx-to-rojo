@@ -1,6 +1,7 @@
 use log::debug;
 use rbx_dom_weak::{
     types::{Ref, Variant},
+    Ustr,
     Instance, WeakDom,
 };
 use std::{
@@ -8,6 +9,7 @@ use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
+use rbx_reflection_database::get;
 
 use structures::*;
 
@@ -71,7 +73,7 @@ fn repr_instance<'a>(
                 _ => unreachable!(),
             };
 
-            let source = match child.properties.get("Source").expect("no Source") {
+            let source = match child.properties.get(&Ustr::from("Source")).expect("no Source") {
                 Variant::String(value) => value,
                 _ => unreachable!(),
             }
@@ -168,11 +170,12 @@ fn repr_instance<'a>(
 
         other_class => {
             // When all else fails, we can make a meta folder if there's scripts in it
-            match rbx_reflection::get_class_descriptor(other_class) {
+            let db = get();
+            match db.classes.get(other_class) {
                 Some(reflected) => {
                     let treat_as_service = RESPECTED_SERVICES.contains(other_class);
                     // Don't represent services not in respected-services
-                    if reflected.is_service() && !treat_as_service {
+                    if reflected.tags.iter().any(|tag| format!("{:?}", tag) == "Service") && !treat_as_service {
                         return None;
                     }
 
@@ -208,7 +211,7 @@ fn repr_instance<'a>(
             // If there are scripts, we'll need to make a .meta.json folder
             let folder_path: Cow<'a, Path> = Cow::Owned(base.join(&child.name));
             let meta = MetaFile {
-                class_name: Some(child.class.clone()),
+                class_name: Some(child.class.to_string()),
                 // properties: properties.into_iter().collect(),
                 ignore_unknown_instances: true,
             };
@@ -253,7 +256,7 @@ impl<'a, I: InstructionReader + ?Sized> TreeIterator<'a, I> {
                     instructions.push(Instruction::AddToTree {
                         name: child.name.clone(),
                         partition: TreePartition {
-                            class_name: child.class.clone(),
+                            class_name: child.class.to_string(),
                             children: child
                                 .children()
                                 .iter()

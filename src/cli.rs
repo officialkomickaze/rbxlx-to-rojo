@@ -2,7 +2,8 @@ use log::info;
 use rbxlx_to_rojo::{filesystem::FileSystem, process_instructions};
 use std::{
     borrow::Cow,
-    fmt, fs,
+    fmt,
+    fs,
     io::{self, BufReader, Write},
     path::PathBuf,
     sync::{Arc, RwLock},
@@ -120,7 +121,7 @@ fn routine() -> Result<(), Problem> {
             rbx_xml::from_reader_default(file_source).map_err(Problem::XMLDecodeError)
         }
         Some(Cow::Borrowed("rbxm")) | Some(Cow::Borrowed("rbxl")) => {
-            rbx_binary::from_reader_default(file_source).map_err(Problem::BinaryDecodeError)
+            rbx_binary::from_reader(file_source).map_err(Problem::BinaryDecodeError)
         }
         _ => Err(Problem::InvalidFile),
     }?;
